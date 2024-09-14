@@ -1,17 +1,15 @@
-/* While this template provides a good starting point for using Wear Compose, you can always
- * take a look at https://github.com/android/wear-os-samples/tree/main/ComposeStarter and
- * https://github.com/android/wear-os-samples/tree/main/ComposeAdvanced to find the most up to date
- * changes to the libraries and their usages.
- */
 package com.example.ben10.presentation
 
 import android.os.Bundle
-import android.widget.ImageView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.with
 import androidx.compose.foundation.Image
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
@@ -23,22 +21,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.wear.compose.material.*
-import com.example.ben10.R // This import is necessary for accessing drawables
+import com.example.ben10.R
 import com.example.ben10.presentation.theme.Ben10Theme
-import coil.load
+import android.view.HapticFeedbackConstants
+import android.view.View
+import androidx.compose.ui.platform.LocalView
 
 
 
@@ -82,7 +81,6 @@ fun Greeting(navController: NavHostController) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-
         Text(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
@@ -91,10 +89,7 @@ fun Greeting(navController: NavHostController) {
             text = "Hello Sir"
         )
 
-       
-
         Spacer(modifier = Modifier.height(16.dp))
-
 
         Button(
             onClick = { navController.navigate("second_screen") },
@@ -114,59 +109,75 @@ fun Greeting(navController: NavHostController) {
     }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun SecondScreen() {
-
     val result = remember { mutableStateOf(1) }
+    val view = LocalView.current
 
+    fun performHapticFeedback() {
+        view.performHapticFeedback(
+            HapticFeedbackConstants.CLOCK_TICK,
+            HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+        )
+    }
 
     val imageResource = when (result.value) {
+        0 -> R.drawable.transform
         1 -> R.drawable.ben
         2 -> R.drawable.alien1
         3 -> R.drawable.alien2
         4 -> R.drawable.alien3
-        5 -> R.drawable.transform
-        else -> R.drawable.alien4
+        5 -> R.drawable.alien4
+        6 -> R.drawable.alien5
+        7 -> R.drawable.alien6
+        8 -> R.drawable.alien7
+        9 -> R.drawable.alien8
+        10 -> R.drawable.alien9
+        else -> R.drawable.alien10
     }
+
 
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Detect bezel rotation (rotary input)
             .onRotaryScrollEvent { event ->
-                if (event.verticalScrollPixels > 0) {
-                    // Bezel rotated to the right (increase result value)
-                    result.value = if (result.value < 4) result.value + 1 else 1
-                } else {
-                    // Bezel rotated to the left (decrease result value)
-                    result.value = if (result.value > 1) result.value - 1 else 4
+                result.value = when {
+                    event.verticalScrollPixels > 0 -> if (result.value < 4) result.value + 1 else 1
+                    else -> if (result.value > 1) result.value - 1 else 4
                 }
-                true // Indicate that the event was consumed
+                true
             }
-            // Detect horizontal drag gestures (swipes)
             .pointerInput(Unit) {
                 detectHorizontalDragGestures { _, dragAmount ->
-                    if (dragAmount > 0) {
-                        // Swipe right (increase result)
-                        result.value = if (result.value < 4) result.value + 1 else 1
-                    } else {
-                        // Swipe left (decrease result)
-                        result.value = if (result.value > 1) result.value - 1 else 4
+                    val oldValue = result.value
+                    result.value = when {
+                        dragAmount > 0 -> if (result.value < 10) result.value + 1 else 2
+                        else -> if (result.value > 2) result.value - 1 else 10
+                    }
+                    if (oldValue != result.value) {
+                        performHapticFeedback()
                     }
                 }
             }
     ) {
-        // Display the image based on the result
-        Image(
-            painter = painterResource(id = imageResource),
-            contentDescription = result.value.toString(),
+        AnimatedContent(
+            targetState = imageResource,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(durationMillis = 300)) with
+                        fadeOut(animationSpec = tween(durationMillis = 300))
+            },
             modifier = Modifier.align(Alignment.Center)
-                .clickable {
-
-                    result.value = 5
+        ) { targetResource ->
+            Image(
+                painter = painterResource(id = targetResource),
+                contentDescription = "Ben 10 character ${result.value}",
+                modifier = Modifier.clickable {
+                    result.value = 0
                 }
-        )
+            )
+        }
     }
 }
 
